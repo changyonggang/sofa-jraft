@@ -30,6 +30,9 @@ import com.alipay.sofa.jraft.rpc.impl.cli.CliClientServiceImpl;
 
 public class CounterClient {
 
+    // 支持 leader 节点变动
+    private static final boolean supportHA = false;
+
     public static void main(final String[] args) throws Exception {
         if (args.length != 2) {
             System.out.println("Useage : java com.alipay.sofa.jraft.example.counter.CounterClient {groupId} {conf}");
@@ -44,22 +47,32 @@ public class CounterClient {
         if (!conf.parse(confStr)) {
             throw new IllegalArgumentException("Fail to parse conf:" + confStr);
         }
-
+        // RouteTable 更新raft group配置
         RouteTable.getInstance().updateConfiguration(groupId, conf);
 
         final CliClientServiceImpl cliClientService = new CliClientServiceImpl();
         cliClientService.init(new CliOptions());
 
+        // RouteTable 更新获取 leader
         if (!RouteTable.getInstance().refreshLeader(cliClientService, groupId, 1000).isOk()) {
             throw new IllegalStateException("Refresh leader failed");
         }
-
-        final PeerId leader = RouteTable.getInstance().selectLeader(groupId);
+        PeerId leader = RouteTable.getInstance().selectLeader(groupId);
         System.out.println("Leader is " + leader);
+
         final int n = 1000;
         final CountDownLatch latch = new CountDownLatch(n);
         final long start = System.currentTimeMillis();
         for (int i = 0; i < n; i++) {
+            if (supportHA) {
+                Thread.sleep(1000);
+                if (!RouteTable.getInstance().refreshLeader(cliClientService, groupId, 1000).isOk()) {
+                    throw new IllegalStateException("Refresh leader failed");
+                }
+                leader = RouteTable.getInstance().selectLeader(groupId);
+                System.out.println("Leader is " + leader);
+            }
+
             incrementAndGet(cliClientService, leader, i, latch);
         }
         latch.await();

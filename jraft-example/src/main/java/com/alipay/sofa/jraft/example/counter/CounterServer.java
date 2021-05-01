@@ -40,9 +40,11 @@ import com.alipay.sofa.jraft.rpc.RpcServer;
  * 2018-Apr-09 4:51:02 PM
  */
 public class CounterServer {
-
+    // jraft 服务端服务框架
     private RaftGroupService    raftGroupService;
+    // raft 节点
     private Node                node;
+    // 业务状态机
     private CounterStateMachine fsm;
 
     public CounterServer(final String dataPath, final String groupId, final PeerId serverId,
@@ -112,7 +114,8 @@ public class CounterServer {
         final String groupId = args[1];
         final String serverIdStr = args[2];
         final String initConfStr = args[3];
-
+        System.out.println("serverIdStr >>>" + serverIdStr);
+        System.out.println("initConfStr >>>" + initConfStr);
         final NodeOptions nodeOptions = new NodeOptions();
         // 为了测试,调整 snapshot 间隔等参数
         // 设置选举超时时间为 1 秒
@@ -134,6 +137,7 @@ public class CounterServer {
         nodeOptions.setInitialConf(initConf);
 
         // 启动
+        // TODO:: 如何保证程序不退出 ？？？
         final CounterServer counterServer = new CounterServer(dataPath, groupId, serverId, nodeOptions);
         System.out.println("Started counter server at port:"
                            + counterServer.getNode().getNodeId().getPeerId().getPort());
